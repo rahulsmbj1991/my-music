@@ -5,24 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import in.co.mymusic.dto.*;
-import in.co.mymusic.proxies.ApiRequester;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpMethod;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-@Service
+@Component
 public class ResponseParser {
-
-    @Autowired
-    private static ApiRequester apiRequester;
 
     private static ObjectMapper mapper = new ObjectMapper();
 
@@ -88,11 +80,10 @@ public class ResponseParser {
                 return relations;
             };
 
-    private static Function<JsonNode, String> resourceUrl =
+    public static Function<JsonNode, String> resourceUrl =
             (jsonNode) -> {
                 final String[] resourceUrl = new String[1];
-                jsonNode.forEach(node -> {
-                    node.fields().forEachRemaining(n -> {
+                jsonNode.fields().forEachRemaining(n -> {
                         switch (n.getKey()) {
                             case "profile":
                                 resourceUrl[0] = n.getValue().toString();
@@ -100,7 +91,6 @@ public class ResponseParser {
                         }
                     });
 
-                });
 
                 return resourceUrl[0];
             };
@@ -216,15 +206,12 @@ public class ResponseParser {
     }
 
     public static MusicInfo populateMusicInfo(MusicBrainzResponse musicBrainzResponse,
-                                              List<CoverArtResponse> coverArtResponses) {
+                                              List<CoverArtResponse> coverArtResponses,
+                                              String description) {
         MusicInfo musicInfo = new MusicInfo();
         musicInfo.setMbid(musicBrainzResponse.getId())
                 .setAlbums(populateAlbumInfo(coverArtResponses))
-                .setDescription(musicBrainzResponse.getRelations().stream()
-                        .filter(r -> Objects.equals(r.getType(), "\"discogs\""))
-                        .map(r ->  resourceUrl.apply(apiRequester.trigger(r.getUrl().getResource(),
-                                    null, JsonNode.class, HttpMethod.GET).getBody()))
-                        .collect(Collectors.toList()).get(0));
+                .setDescription(description);
 
         return musicInfo;
     }
